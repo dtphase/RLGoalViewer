@@ -75,13 +75,22 @@ NextGoal()
     GoalNumber += 1
 }
 
+MoveMsgBox()
+{
+	WinGetActiveTitle, Title
+    WinMove, %Title%,, 0, 0
+    return
+}
+
 WatchAllGoals() 
 {
     NextGoal()
     GoodGoals := "G"
     Loop {
         global GoalNumber
-        MsgBox, 4,, Good goal? %GoodGoals%
+        MsgBox, 4100,Title, Good goal? %GoodGoals%
+        Sleep, 100
+        MoveMsgBox()
         IfMsgBox Yes
         {
             GoalAdjust := GoalNumber - 1

@@ -3,6 +3,7 @@ import sys
 import requests
 import json
 import carball
+from shutil import move
 
 video = 1
 game = 1
@@ -17,9 +18,12 @@ def write_game_data_to_file(lines):
     folder = "C:/Users/stream/Documents/My Games/Rocket League/TAGame/Demos/" + str(game) + "/"
     filename = "Game" + str(game) + ".txt"
     file_contents = ""
+    absolute_path = folder + filename
+    if not os.path.exists(os.path.dirname(absolute_path)):
+        os.makedirs(os.path.dirname(absolute_path))
     for line in lines:
-        file_contents += line
-    with open(folder + filename, 'w') as file:
+        file_contents += line   
+    with open(folder + filename, 'w+') as file:
         file.write(str(file_contents))
 
 def print_json(j):
@@ -30,9 +34,9 @@ def analyze_replay(replay_file, player_id):
     proto_game = analysis_manager.get_json_data()
     for player in proto_game["players"]:
         if player["id"]["id"] == player_id:
-            if int(proto_game["players"][0]["goals"]) < 1:
+           """  if proto_game["players"][0]["goals"] < 1:
                 print("Player scored 0 goals")
-                return False
+                return False """
         
         #print_json(proto_game)
     goals = proto_game["gameMetadata"]["goals"]
@@ -97,12 +101,12 @@ def download_and_rename(video_id, game_id, replay_id, player_id):
     if os.path.exists(new_folder) == False:
         os.mkdir(new_folder)
 
-    os.rename(replay_location, new_replay_location)
+    move(replay_location, new_replay_location)
 
 
 
 
-player_id = str(76561199023677910) #input("Please enter the Steam ID of the player whose replays you wish to download")
+player_id = input("Please enter the Steam ID of the player whose replays you wish to download\n")#str(76561199023677910) #input("Please enter the Steam ID of the player whose replays you wish to download")
 get_replays(player_id, playlist)
 
 for argument in sys.argv:
