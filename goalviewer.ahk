@@ -1,14 +1,25 @@
 SetKeyDelay, 125
 
 GoalNumber := 1
+GoodGoals := ""
+
+Gui, +LastFound -Caption +AlwaysOnTop
+Gui, Add, Text, , Good goal?
+Gui, Add, Button, xm gYes w40, Yes
+Gui, Add, Button, x+10 gNo w40, No
+
+
 
 ResetReplay()
 {
+    BlockInput, MouseMove
+    MouseMove, 5,5
     Send {Escape}
     Send {Down}
     Send {Enter}
-    Sleep, 50
+    Sleep, 200
     Send {Enter}
+    BlockInput, MouseMoveOff
     return 0
 }
 
@@ -56,13 +67,17 @@ GetNextGoalKeyframe() {
     FileReadLine, Keyframe, %Path%, %GoalNumber%
     ToolTip, %Keyframe%
     return Keyframe
+
+
 }
 
 NextGoal()
 {
-    global GoalNumber
     ResetReplay()
     NextFrame := GetNextGoalKeyframe()
+    if (NextFrame == 0) {
+        return
+    }
     ToolTip, %NextFrame%
     FastForwards := GetNextKeyframeInInterval(NextFrame) ; 410 is roughly 8 seconds
     Sleep, 2000
@@ -73,31 +88,32 @@ NextGoal()
         Send {Right}
     }
     GoalNumber += 1
+    Gui, Show, x5 y5
+    MouseMove, 5,5
 }
 
-MoveMsgBox()
+
+
+Yes()
 {
-	WinGetActiveTitle, Title
-    WinMove, %Title%,, 0, 0
-    return
+    Gui, Hide   ;hides the window
+    global GoalNumber
+    global GoodGoals
+    GoalAdjust := GoalNumber - 1
+    GoodGoals .= " " GoalAdjust
+    NextGoal()
 }
+
+No()
+{
+    Gui, Hide
+    NextGoal()
+}
+
 
 WatchAllGoals() 
 {
     NextGoal()
-    GoodGoals := "G"
-    Loop {
-        global GoalNumber
-        MsgBox, 4100,Title, Good goal? %GoodGoals%
-        Sleep, 100
-        MoveMsgBox()
-        IfMsgBox Yes
-        {
-            GoalAdjust := GoalNumber - 1
-            GoodGoals .= " "  GoalAdjust
-        }
-        NextGoal()
-    }
 }
 
 #IfWinActive, Rocket League
@@ -111,5 +127,7 @@ WatchAllGoals()
     e::GetNextGoalKeyframe()
 
     x::WatchAllGoals()
+
+    q::Suspend
     return
 }
