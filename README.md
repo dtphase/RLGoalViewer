@@ -1,5 +1,10 @@
 # RLGoalViewer
 
+TODO:
+Laravel site
+Faster
+Continue from last game checked
+
 Error:
 
 
