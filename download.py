@@ -1,3 +1,4 @@
+from env import SITE, HEADERS, REPLAYS_FOLDER, REPLAY_EXTENSION, PLAYLIST
 import os
 import sys
 import requests
@@ -8,22 +9,31 @@ from shutil import move
 video = 1
 game = 1
 
-site = "https://ballchasing.com/"
-token = "q0S3nwpBdV9Nl7AzhUgs36oq3htgcoCT9dCNOUCw"
-headers = {"Authorization": token}
-replay_extension = ".replay"
-playlist = {"unranked-duels", "unranked-doubles", "unranked-standard", "ranked-duels", "ranked-doubles", "ranked-solo-standard", "ranked-standard", "private"}
-
-def write_game_data_to_file(lines):
-    folder = "C:/Users/stream/Documents/My Games/Rocket League/TAGame/Demos/" + str(game) + "/"
-    filename = "Game" + str(game) + ".txt"
-    file_contents = ""
+def update_active_txt():
+    global game
+    global video
+    folder =  REPLAYS_FOLDER + "/"
+    filename = "active.txt"
+    file_contents = str(video) + "\n" + str(game)
     absolute_path = folder + filename
     if not os.path.exists(os.path.dirname(absolute_path)):
         os.makedirs(os.path.dirname(absolute_path))
-    for line in lines:
-        file_contents += line   
-    with open(folder + filename, 'w+') as file:
+    with open(folder + filename, 'w') as file:
+        file.write(str(file_contents))
+
+
+def write_game_data_to_file(replay_id, goal_frames):
+    global game
+    global video
+    folder =  REPLAYS_FOLDER + "/" + str(video) + "/"
+    filename = "Game" + str(game) + ".txt"
+    file_contents = "Game " + str(game) + ": Replay: " + replay_id + " Goals:\n"
+    absolute_path = folder + filename
+    if not os.path.exists(os.path.dirname(absolute_path)):
+        os.makedirs(os.path.dirname(absolute_path))
+    for goal in goal_frames:
+        file_contents += str(goal)
+    with open(folder + filename, 'w') as file:
         file.write(str(file_contents))
 
 def print_json(j):
@@ -45,34 +55,33 @@ def analyze_replay(replay_file, player_id):
         if goal["playerId"]["id"] == player_id:
             print(goal["frameNumber"])
             goal_frames.append(str(goal["frameNumber"]) + "\n")
-    write_game_data_to_file(goal_frames)
+    return goal_frames
+    
 
 def get_replays(steam_id, playlist):
     query = {
         "player-id": "steam:" + steam_id,
         "count": 200
     }
-    url = site + "api/replays"
-    res = requests.get(url, headers=headers, params=query)
+    url = SITE + "api/replays"
+    res = requests.get(url, headers=HEADERS, params=query)
     print(res.status_code)
     replay_list = json.loads(res.text)["list"]
     print_json(replay_list)
-    game = 1
     for replay in replay_list:
-        res2 = requests.get(url, headers=headers, params={"id": replay["id"]})
+        res2 = requests.get(url, headers=HEADERS, params={"id": replay["id"]})
         print_json(json.loads(res2.text))
         download_and_rename(video, game, replay["id"], steam_id)
-        game += 1
 
 
 
 
 def download_and_rename(video_id, game_id, replay_id, player_id):
-    url = site + "api/replays/" + replay_id + "/file"
-    filename = "active" + replay_extension
-    folder = "C:/Users/stream/Documents/My Games/Rocket League/TAGame/Demos"
-    replay_location = folder + "/" + filename
-    res = requests.get(url, headers=headers)
+    global game
+    url = SITE + "api/replays/" + replay_id + "/file"
+    filename = "active" + REPLAY_EXTENSION
+    replay_location = REPLAYS_FOLDER + "/" + filename
+    res = requests.get(url, headers=HEADERS)
 
     print(res.status_code)
 
@@ -81,10 +90,10 @@ def download_and_rename(video_id, game_id, replay_id, player_id):
             replay_file.write(chunk)
 
     print("Downloaded to: " + replay_location)
-
+    update_active_txt()
     if player_id != "":    
-        analyze_replay(replay_location, player_id)
-
+        goal_frames = analyze_replay(replay_location, player_id)
+        write_game_data_to_file(replay_id, goal_frames)
     new_filename_input = input('Enter the goal numbers that interested you\n')
     prefix = "Game_" + str(game_id) + "_"
     if len(new_filename_input) > 1:
@@ -95,19 +104,20 @@ def download_and_rename(video_id, game_id, replay_id, player_id):
     else:
         new_filename = "G" + new_filename_input
 
-    new_folder = folder + "/" + str(video_id) + "/"
-    new_replay_location = new_folder + prefix + new_filename + replay_extension
+    new_folder = REPLAYS_FOLDER + "/" + str(video_id) + "/"
+    new_replay_location = new_folder + prefix + new_filename + REPLAY_EXTENSION
 
     if os.path.exists(new_folder) == False:
         os.mkdir(new_folder)
 
     move(replay_location, new_replay_location)
-
+    
+    game += 1
 
 
 
 player_id = input("Please enter the Steam ID of the player whose replays you wish to download\n")#str(76561199023677910) #input("Please enter the Steam ID of the player whose replays you wish to download")
-get_replays(player_id, playlist)
+get_replays(player_id, PLAYLIST)
 
 for argument in sys.argv:
     if argument == os.path.basename(__file__):

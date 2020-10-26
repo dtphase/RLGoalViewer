@@ -49,13 +49,13 @@ GetLineFromFile(LineNum, Filename)
 
 GetGameNumber() 
 {
-    FileReadLine, GameNumber, C:\Users\stream\Documents\My Games\Rocket League\TAGame\Demos\active.txt, 1
+    FileReadLine, GameNumber, C:\Users\stream\Documents\My Games\Rocket League\TAGame\Demos\active.txt, 2
     return GameNumber
 }
 
 GetVideoNumber() 
 {
-    FileReadLine, VideoNumber, C:\Users\stream\Documents\My Games\Rocket League\TAGame\Demos\active.txt, 2
+    FileReadLine, VideoNumber, C:\Users\stream\Documents\My Games\Rocket League\TAGame\Demos\active.txt, 1
     return VideoNumber
 }
 
@@ -63,12 +63,11 @@ GetNextGoalKeyframe() {
     global GoalNumber
     VideoNumber := GetVideoNumber()
     GameNumber := GetGameNumber()
+    LineNumber := GameNumber + 1
     Path := "C:\Users\stream\Documents\My Games\Rocket League\TAGame\Demos\" VideoNumber "\Game" GameNumber ".txt"
-    FileReadLine, Keyframe, %Path%, %GoalNumber%
+    FileReadLine, Keyframe, %Path%, %LineNumber%
     ToolTip, %Keyframe%
     return Keyframe
-
-
 }
 
 NextGoal()
@@ -97,6 +96,7 @@ NextGoal()
 Yes()
 {
     Gui, Hide   ;hides the window
+    WinActivate, Rocket League
     global GoalNumber
     global GoodGoals
     GoalAdjust := GoalNumber - 1
