@@ -4,6 +4,7 @@ TODO:
 Laravel site
 Faster
 Continue from last game checked
+Download and analyze 1 replay with goals (check) in advance in seperate thread
 
 Error:
 
