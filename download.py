@@ -4,6 +4,7 @@ import sys
 import requests
 import json
 import carball
+import threading
 from shutil import move
 
 video = 1
@@ -74,9 +75,22 @@ def get_replays(steam_id, playlist):
         download_and_rename(video, game, replay["id"], steam_id)
 
 
-
+def download_and_analyze(video_id, game_id, replay_id, player_id):
+    global game
+    url = SITE + "api/replays/" + replay_id + "/file"
+    filename = "active" + REPLAY_EXTENSION
+    replay_location = REPLAYS_FOLDER + "/" + filename
+    res = requests.get(url, headers=HEADERS)
+    with open(replay_location, 'wb') as replay_file:
+        for chunk in res.iter_content(chunk_size=128):
+            replay_file.write(chunk)
+    if player_id != "":    
+        goal_frames = analyze_replay(replay_location, player_id)
+        write_game_data_to_file(replay_id, goal_frames)
 
 def download_and_rename(video_id, game_id, replay_id, player_id):
+    x = threading.Thread(target=download_and_analyze, args=(video_id, game_id, replay_id, player_id), daemon=True)
+    x.start()
     global game
     url = SITE + "api/replays/" + replay_id + "/file"
     filename = "active" + REPLAY_EXTENSION
@@ -85,15 +99,15 @@ def download_and_rename(video_id, game_id, replay_id, player_id):
 
     print(res.status_code)
 
-    with open(replay_location, 'wb') as replay_file:
+    """ with open(replay_location, 'wb') as replay_file:
         for chunk in res.iter_content(chunk_size=128):
-            replay_file.write(chunk)
+            replay_file.write(chunk) """
 
     print("Downloaded to: " + replay_location)
     update_active_txt()
-    if player_id != "":    
+    """ if player_id != "":    
         goal_frames = analyze_replay(replay_location, player_id)
-        write_game_data_to_file(replay_id, goal_frames)
+        write_game_data_to_file(replay_id, goal_frames) """
     new_filename_input = input('Enter the goal numbers that interested you\n')
     prefix = "Game_" + str(game_id) + "_"
     if len(new_filename_input) > 1:
@@ -113,7 +127,12 @@ def download_and_rename(video_id, game_id, replay_id, player_id):
     move(replay_location, new_replay_location)
     
     game += 1
+    x = threading.Thread(target=download_and_analyze, args=(video_id, game_id, replay_id, player_id), daemon=True)
+    x.start()
 
+def get_next_replay():
+    
+    return
 
 
 player_id = input("Please enter the Steam ID of the player whose replays you wish to download\n")#str(76561199023677910) #input("Please enter the Steam ID of the player whose replays you wish to download")
