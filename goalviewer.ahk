@@ -61,23 +61,49 @@ GetVideoNumber()
 
 GetNextGoalKeyframe() {
     global GoalNumber
+    global GoodGoals
     VideoNumber := GetVideoNumber()
     GameNumber := GetGameNumber()
-    LineNumber := GameNumber + 1
+    LineNumber := GoalNumber + 1
+    Line2 := 1
     Path := "C:\Users\stream\Documents\My Games\Rocket League\TAGame\Demos\" VideoNumber "\Game" GameNumber ".txt"
+    ;Loop, read, %Path%
+    ;{
+        
+    ;    Loop, parse, A_LoopReadLine, %A_Tab%
+    ;    {
+    ;        if(Line2 != 1) 
+     ;       {
+    ;            MsgBox, Frame: %A_LoopField% Line: %Line2% %GoalNumber%
+    ;        }
+    ;        Line2 += 1
+    ;    }
+    ;}
     FileReadLine, Keyframe, %Path%, %LineNumber%
     ToolTip, %Keyframe%
+    if (Keyframe < 1) ;Break if no goals left
+    {
+        if WinExist("ahk_exe Code.exe")
+        {
+            WinActivate, ahk_exe Code.exe
+            Click, 381, 1057
+            TrimGoals := LTrim(GoodGoals)
+            Send,%TrimGoals%{Enter}
+            WinActivate, Rocket League
+        }
+        Reload
+        Sleep, 1000
+        MsgBox, Something went wrong reloading the script
+    }
     return Keyframe
 }
 
 NextGoal()
 {
-    ResetReplay()
+    global GoalNumber
     NextFrame := GetNextGoalKeyframe()
-    if (NextFrame == 0) {
-        return
-    }
     ToolTip, %NextFrame%
+    ResetReplay()
     FastForwards := GetNextKeyframeInInterval(NextFrame) ; 410 is roughly 8 seconds
     Sleep, 2000
     SetCamera()
@@ -128,6 +154,12 @@ WatchAllGoals()
 
     x::WatchAllGoals()
 
-    q::Suspend
+    y::Yes()
+
+    n::No()
+
+    q::
+    
+
     return
 }
