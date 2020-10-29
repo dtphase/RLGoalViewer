@@ -5,10 +5,42 @@ import requests
 import json
 import carball
 import threading
+import logging
+import time
 from shutil import move
 
+logging.basicConfig(level=logging.DEBUG,
+                    format='(%(threadName)-9s) %(message)s',)
 video = 1
 game = 1
+next_game = None
+
+class Replay:
+    def __init__(self, replay_id, goals, path, player_id, is_next):
+        self.replay_id = replay_id
+        self.goals = goals
+        self.path = path
+        self.player_id = player_id
+        d = threading.Thread(target=self.download_and_analyze, args=(player_id, is_next), daemon=True)
+        d.start()
+        #d.join()
+
+    def download_and_analyze(self, player_id, is_next):
+        url = SITE + "api/replays/" + self.replay_id + "/file"
+        replay_location = self.path
+        res = requests.get(url, headers=HEADERS)
+        with open(replay_location, 'wb') as replay_file:
+            for chunk in res.iter_content(chunk_size=128):
+                replay_file.write(chunk)
+        if player_id != "":
+            time.sleep(20)
+            goal_frames = analyze_replay(replay_location, player_id)
+            write_game_data_to_file(self.replay_id, goal_frames)
+        if is_next == True:
+            global next_game
+            next_game = self
+            logging.debug(next_game)
+
 
 def update_active_txt():
     global game
@@ -75,22 +107,18 @@ def get_replays(steam_id, playlist):
         download_and_rename(video, game, replay["id"], steam_id)
 
 
-def download_and_analyze(video_id, game_id, replay_id, player_id):
-    global game
-    url = SITE + "api/replays/" + replay_id + "/file"
-    filename = "active" + REPLAY_EXTENSION
-    replay_location = REPLAYS_FOLDER + "/" + filename
-    res = requests.get(url, headers=HEADERS)
-    with open(replay_location, 'wb') as replay_file:
-        for chunk in res.iter_content(chunk_size=128):
-            replay_file.write(chunk)
-    if player_id != "":    
-        goal_frames = analyze_replay(replay_location, player_id)
-        write_game_data_to_file(replay_id, goal_frames)
+
 
 def download_and_rename(video_id, game_id, replay_id, player_id):
-    x = threading.Thread(target=download_and_analyze, args=(video_id, game_id, replay_id, player_id), daemon=True)
-    x.start()
+    #x = threading.Thread(target=download_and_analyze, args=(video_id, game_id, replay_id, player_id), daemon=True)
+    #x.start()
+    global next_game
+    filename = "active" + REPLAY_EXTENSION
+    path = REPLAYS_FOLDER + "/" + filename
+    r1 = Replay(replay_id, "", path, player_id, False)
+    print(r1.path)
+    if (next_game ==  None):
+        Replay(replay_id, "", path, player_id, True)
     global game
     url = SITE + "api/replays/" + replay_id + "/file"
     filename = "active" + REPLAY_EXTENSION
@@ -109,6 +137,7 @@ def download_and_rename(video_id, game_id, replay_id, player_id):
         goal_frames = analyze_replay(replay_location, player_id)
         write_game_data_to_file(replay_id, goal_frames) """
     new_filename_input = input('Enter the goal numbers that interested you\n')
+    print(next_game)
     prefix = "Game_" + str(game_id) + "_"
     if len(new_filename_input) > 1:
         new_filename_array = new_filename_input.split()
@@ -127,8 +156,6 @@ def download_and_rename(video_id, game_id, replay_id, player_id):
     move(replay_location, new_replay_location)
     
     game += 1
-    x = threading.Thread(target=download_and_analyze, args=(video_id, game_id, replay_id, player_id), daemon=True)
-    x.start()
 
 def get_next_replay():
     
