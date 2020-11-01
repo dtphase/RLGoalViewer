@@ -13,7 +13,10 @@ logging.basicConfig(level=logging.DEBUG,
                     format='(%(threadName)-9s) %(message)s',)
 video = 1
 game = 1
-next_game = None
+replay_queue = []
+max_queue_size = 3
+queue_size = 0
+
 
 class Replay:
     def __init__(self, replay_id, goals, path, player_id, is_next):
@@ -23,7 +26,8 @@ class Replay:
         self.player_id = player_id
         d = threading.Thread(target=self.download_and_analyze, args=(player_id, is_next), daemon=True)
         d.start()
-        #d.join()
+        if(is_next == False):
+            d.join()
 
     def download_and_analyze(self, player_id, is_next):
         url = SITE + "api/replays/" + self.replay_id + "/file"
@@ -33,13 +37,13 @@ class Replay:
             for chunk in res.iter_content(chunk_size=128):
                 replay_file.write(chunk)
         if player_id != "":
-            time.sleep(20)
+            time.sleep(10)
             goal_frames = analyze_replay(replay_location, player_id)
             write_game_data_to_file(self.replay_id, goal_frames)
         if is_next == True:
-            global next_game
-            next_game = self
-            logging.debug(next_game)
+            global replay_queue
+            replay_queue.append(self)
+            logging.debug(replay_queue)
 
 
 def update_active_txt():
@@ -112,13 +116,17 @@ def get_replays(steam_id, playlist):
 def download_and_rename(video_id, game_id, replay_id, player_id):
     #x = threading.Thread(target=download_and_analyze, args=(video_id, game_id, replay_id, player_id), daemon=True)
     #x.start()
-    global next_game
-    filename = "active" + REPLAY_EXTENSION
+    global replay_queue
+    global max_queue_size
+    global queue_size
+    filename = "active" + str(queue_size) + REPLAY_EXTENSION
     path = REPLAYS_FOLDER + "/" + filename
-    r1 = Replay(replay_id, "", path, player_id, False)
-    print(r1.path)
-    if (next_game ==  None):
+    if(len(replay_queue) == 0):
+        r1 = Replay(replay_id, "", path, player_id, False)
+        print(r1.path)
+    while (queue_size < max_queue_size):
         Replay(replay_id, "", path, player_id, True)
+        queue_size += 1
     global game
     url = SITE + "api/replays/" + replay_id + "/file"
     filename = "active" + REPLAY_EXTENSION
@@ -137,7 +145,7 @@ def download_and_rename(video_id, game_id, replay_id, player_id):
         goal_frames = analyze_replay(replay_location, player_id)
         write_game_data_to_file(replay_id, goal_frames) """
     new_filename_input = input('Enter the goal numbers that interested you\n')
-    print(next_game)
+    print(replay_queue)
     prefix = "Game_" + str(game_id) + "_"
     if len(new_filename_input) > 1:
         new_filename_array = new_filename_input.split()
@@ -153,7 +161,8 @@ def download_and_rename(video_id, game_id, replay_id, player_id):
     if os.path.exists(new_folder) == False:
         os.mkdir(new_folder)
 
-    move(replay_location, new_replay_location)
+    move(replay_queue.pop(0).path, new_replay_location)
+    queue_size -= 1
     
     game += 1
 
